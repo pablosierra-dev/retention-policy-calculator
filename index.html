@@ -155,6 +155,46 @@
       font: inherit;
     }
 
+    .settings-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      margin: 0 0 20px;
+    }
+
+    .setting-group {
+      width: 100%;
+    }
+
+    .setting-group-date {
+      flex: 1 1 auto;
+    }
+
+    .setting-group-days {
+      flex: 0 0 120px;
+    }
+
+    .day-offset-input {
+      width: 100%;
+      min-height: 58px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .day-offset-input:focus {
+      outline: 1px solid var(--accent);
+    }
+
+    .day-offset-input::-webkit-outer-spin-button,
+    .day-offset-input::-webkit-inner-spin-button {
+      margin: 0;
+    }
+
     .date-trigger {
       width: 100%;
       min-height: 58px;
@@ -184,13 +224,42 @@
     }
 
     .calendar-popover {
-      margin-top: 14px;
+      width: min(520px, calc(100vw - 32px));
       padding: 18px;
       border: 1px solid var(--line);
       border-radius: 22px;
       background: var(--panel);
       box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-      display: none;
+      display: block;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -46%);
+      z-index: 1001;
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.32s ease, transform 0.32s ease, visibility 0.32s ease;
+    }
+
+    .calendar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: block;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.32s ease, visibility 0.32s ease;
+    }
+
+    body.dark .calendar-overlay {
+      background: rgba(0, 0, 0, 0.45);
     }
 
     body.dark .calendar-popover {
@@ -198,7 +267,25 @@
     }
 
     .calendar-popover.open {
-      display: block;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translate(-50%, -50%);
+    }
+
+    .calendar-overlay.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .calendar-title {
+      margin: 0 0 14px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      text-align: center;
     }
 
     .calendar-header {
@@ -487,6 +574,21 @@
     }
 
     @media (max-width: 560px) {
+      .settings-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .setting-group-days {
+        flex: 1 1 auto;
+      }
+
+      .calendar-popover {
+        width: calc(100vw - 20px);
+        max-height: calc(100vh - 20px);
+        padding: 16px;
+      }
+
       .card {
         padding: 20px;
         border-radius: 24px;
@@ -532,17 +634,29 @@
     </div>
 
     <h1>Retention Policy Calculator</h1>
-    <p class="subtitle">Pick a date and calculate the retention date by adding 21 days.</p>
+    <p class="subtitle">Pick a date and calculate the retention date by adding the number of days you choose.</p>
 
-    <label for="dateTrigger">Choose a date</label>
-    <button type="button" class="date-trigger" id="dateTrigger" aria-expanded="false" aria-controls="calendarPopover">
-      <span id="dateDisplay">Click to choose a date</span>
-      <span class="date-icon" aria-hidden="true">📅</span>
-    </button>
+    <div class="settings-row">
+      <div class="setting-group setting-group-date">
+        <label for="dateTrigger">Choose a date</label>
+        <button type="button" class="date-trigger" id="dateTrigger" aria-expanded="false" aria-controls="calendarPopover">
+          <span id="dateDisplay">Click to choose a date</span>
+          <span class="date-icon" aria-hidden="true">📅</span>
+        </button>
+      </div>
+
+      <div class="setting-group setting-group-days">
+        <label for="dayOffsetInput">Days to add</label>
+        <input type="number" class="day-offset-input" id="dayOffsetInput" value="21" min="0" step="1" inputmode="numeric" aria-label="Days to add" />
+      </div>
+    </div>
 
     <input type="hidden" id="startDate" />
 
-    <section class="calendar-popover" id="calendarPopover" aria-label="Calendar picker">
+    <div class="calendar-overlay" id="calendarOverlay"></div>
+
+    <section class="calendar-popover" id="calendarPopover" aria-label="Calendar picker" aria-modal="true" role="dialog">
+      <h2 class="calendar-title">Choose a date</h2>
       <div class="calendar-header">
         <button type="button" class="calendar-nav" id="prevMonth" aria-label="Previous month">‹</button>
         <div class="calendar-month-label" id="calendarMonthLabel">March 2026</div>
@@ -567,7 +681,7 @@
       </div>
     </section>
 
-    <button id="calculateBtn">Calculate +21 Days</button>
+    <button id="calculateBtn">Calculate</button>
 
     <section class="result" aria-live="polite">
       <p class="result-title">Result</p>
@@ -586,6 +700,7 @@
       <input type="text" class="copy-output" id="copyOutput" readonly value="" aria-label="Calculated date in selected format" />
       <span class="copy-feedback" id="copyFeedback" aria-live="polite"></span>
     </div>
+    <div class="footer-note">Fast. Simple. Clear.</div>
   </main>
 
   <script>
@@ -595,6 +710,7 @@
     const dateDisplay = document.getElementById('dateDisplay');
     const dateTrigger = document.getElementById('dateTrigger');
     const calendarPopover = document.getElementById('calendarPopover');
+    const calendarOverlay = document.getElementById('calendarOverlay');
     const calendarGrid = document.getElementById('calendarGrid');
     const calendarMonthLabel = document.getElementById('calendarMonthLabel');
     const prevMonthBtn = document.getElementById('prevMonth');
@@ -604,6 +720,7 @@
     const themeToggle = document.getElementById('themeToggle');
     const themeToggleText = document.getElementById('themeToggleText');
     const themeToggleThumb = document.getElementById('themeToggleThumb');
+    const dayOffsetInput = document.getElementById('dayOffsetInput');
     const copyBtn = document.getElementById('copyBtn');
     const formatSelect = document.getElementById('formatSelect');
     const copyOutput = document.getElementById('copyOutput');
@@ -680,7 +797,9 @@
 
       const [year, month, day] = value.split('-').map(Number);
       const baseDate = new Date(year, month - 1, day);
-      baseDate.setDate(baseDate.getDate() + 21);
+      const parsedOffset = Number(dayOffsetInput.value);
+      const dayOffset = Number.isFinite(parsedOffset) ? parsedOffset : 21;
+      baseDate.setDate(baseDate.getDate() + dayOffset);
 
       resultText.textContent = formatDate(baseDate);
       updateCopyOutput(baseDate);
@@ -779,12 +898,14 @@
     }
 
     function openCalendar() {
+      calendarOverlay.classList.add('open');
       calendarPopover.classList.add('open');
       dateTrigger.setAttribute('aria-expanded', 'true');
       renderCalendar();
     }
 
     function closeCalendar() {
+      calendarOverlay.classList.remove('open');
       calendarPopover.classList.remove('open');
       dateTrigger.setAttribute('aria-expanded', 'false');
     }
@@ -885,6 +1006,16 @@
       resetCopyFeedback();
     });
 
+    dayOffsetInput.addEventListener('input', () => {
+      if (startDateInput.value) {
+        calculateRetentionDate();
+      } else {
+        resultText.textContent = 'Please select a valid date.';
+        copyOutput.value = '';
+      }
+      resetCopyFeedback();
+    });
+
     prevMonthBtn.addEventListener('click', () => {
       viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
       renderCalendar();
@@ -900,9 +1031,15 @@
     });
 
     closeCalendarBtn.addEventListener('click', closeCalendar);
+    calendarOverlay.addEventListener('click', closeCalendar);
 
     document.addEventListener('click', (event) => {
-      if (!calendarPopover.contains(event.target) && !dateTrigger.contains(event.target)) {
+      if (
+        calendarPopover.classList.contains('open') &&
+        !calendarPopover.contains(event.target) &&
+        !dateTrigger.contains(event.target) &&
+        !calendarOverlay.contains(event.target)
+      ) {
         closeCalendar();
       }
     });
